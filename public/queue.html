@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SMD QUEUING 2025</title>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -184,6 +184,7 @@
   </style>
 </head>
 <body>
+
 <div class="left-panel">
   <div class="top-section">
     <div class="reset-wrapper">
@@ -201,11 +202,12 @@
     <iframe src="https://cht-bx-denr4a2025.web.app" scrolling="no" allow="clipboard-write; clipboard-read; microphone; camera"></iframe>
   </div>
 </div>
+
 <div class="right-panel">
   <div class="now-serving-header">
     <div class="left-title">
-      <img src="DENRlogo.png" alt="Logo" class="logo">
-      <span>DEPARTMENT OF ENVIRONMENT<br>AND NATURAL RESOURCES</span>
+      <img src="DENRlogo.png" alt="Logo" class="logo" />
+      <span>DEPARTMENT OF ENVIRONMENT<br />AND NATURAL RESOURCES</span>
     </div>
     <div class="right-title"></div>
   </div>
@@ -214,192 +216,255 @@
 </div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCd4D6a_q5JXgnDWF5lewdAt0-mM0O4HCw",
-  authDomain: "qn-denr4a2025.firebaseapp.com",
-  databaseURL: "https://qn-denr4a2025-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "qn-denr4a2025",
-  storageBucket: "qn-denr4a2025.appspot.com",
-  messagingSenderId: "161329402235",
-  appId: "1:161329402235:web:75c889dd6887fc00002dde"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  const firebaseConfig = {
+    apiKey: "AIzaSyCd4D6a_q5JXgnDWF5lewdAt0-mM0O4HCw",
+    authDomain: "qn-denr4a2025.firebaseapp.com",
+    databaseURL: "https://qn-denr4a2025-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "qn-denr4a2025",
+    storageBucket: "qn-denr4a2025.appspot.com",
+    messagingSenderId: "161329402235",
+    appId: "1:161329402235:web:75c889dd6887fc00002dde"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-const sections = [
-  "Office of the Chief Surveys and Mapping Division",
-  "Aggregate and Correction Section",
-  "Original and Other Survey Section",
-  "Land Evaluation Section",
-  "Survey Control Section",
-  "Senior/PWD"
-];
-const sectionKeys = ["chief", "aggregate", "original", "evaluation", "control", "senior"];
-const baseNumbers = [1000, 2000, 3000, 4000, 5000, 6000];
-const currentNumbers = [...baseNumbers];
-const dingDong = new Audio("dingdong.mp3");
-const hasSpoken = {};
-const isInitialLoad = {};
+  const sections = [
+    "Office of the Chief Surveys and Mapping Division",
+    "Aggregate and Correction Section",
+    "Original and Other Survey Section",
+    "Land Evaluation Section",
+    "Survey Control Section",
+    "Senior/PWD"
+  ];
+  const sectionKeys = ["chief", "aggregate", "original", "evaluation", "control", "senior"];
+  const baseNumbers = [1000, 2000, 3000, 4000, 5000, 6000];
+  const currentNumbers = [...baseNumbers];
+  const dingDong = new Audio("dingdong.mp3");
 
-function updateClock() {
-  const now = new Date();
-  document.getElementById("clock").textContent = `${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
-}
-setInterval(updateClock, 1000); updateClock();
+  // Flags para i-suppress ang unang tunog sa unang load sa bawat user/session
+  const firstLoadFlags = {};
 
-function speakNumber(number) {
-  const utter = new SpeechSynthesisUtterance(`Now serving number ${number.toString().split("").join(" ")}`);
-  utter.voice = speechSynthesis.getVoices().find(v => v.name.toLowerCase().includes("zira")) || speechSynthesis.getVoices()[0];
-  utter.rate = 0.7;
-  dingDong.play();
-  setTimeout(() => speechSynthesis.speak(utter), 500);
-}
-
-function updateDisplay(index, skipSound = false) {
-  const leftText = document.querySelectorAll(".current-number")[index];
-  const rightText = document.querySelectorAll(".section-item span:last-child")[index];
-  leftText.textContent = `Current Number: ${currentNumbers[index]}`;
-  rightText.textContent = currentNumbers[index];
-  rightText.classList.add("blink");
-  setTimeout(() => rightText.classList.remove("blink"), 3000);
-
-  if (!skipSound) {
-    speakNumber(currentNumbers[index]);
+  function updateClock() {
+    const now = new Date();
+    document.getElementById("clock").textContent = `${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
   }
-}
+  setInterval(updateClock, 1000);
+  updateClock();
 
-function createPanels() {
-  const grid = document.getElementById("grid");
-  const sectionList = document.getElementById("section-list");
-  grid.innerHTML = ""; sectionList.innerHTML = "";
+  // Function para tumunog lang kapag may update, pero hindi sa unang load
+  function speakNumber(number, base, suppressFirstLoad = true) {
+    if (
+      (suppressFirstLoad && firstLoadFlags.current === true) || // unang load, suppress
+      number === base || // default base number, suppress
+      window.alreadySpoken === number // ulit ulit na number, suppress
+    ) return;
 
-  sections.forEach((section, index) => {
-    const key = sectionKeys[index];
-    isInitialLoad[key] = true;
+    window.alreadySpoken = number;
+    const utter = new SpeechSynthesisUtterance(
+      `Now serving number ${number.toString().split("").join(" ")}`
+    );
+    utter.voice =
+      speechSynthesis
+        .getVoices()
+        .find((v) => v.name.toLowerCase().includes("zira")) ||
+      speechSynthesis.getVoices()[0];
+    utter.rate = 0.7;
+    dingDong.play();
+    setTimeout(() => speechSynthesis.speak(utter), 500);
+  }
 
-    const card = document.createElement("div"); card.className = "card";
-    const title = document.createElement("div"); title.className = "section-title"; title.textContent = section;
-    const current = document.createElement("div"); current.className = "current-number"; current.textContent = `Current Number: ${currentNumbers[index]}`;
-    const buttonsDiv = document.createElement("div"); buttonsDiv.className = "buttons";
-    const btnBack = document.createElement("button"), btnRecall = document.createElement("button"), btnNext = document.createElement("button"),
-          btnProcess = document.createElement("button"), btnDone = document.createElement("button");
-    btnBack.textContent = "Back"; btnRecall.textContent = "Recall"; btnNext.textContent = "Next";
-    btnProcess.textContent = "For Process"; btnDone.textContent = "Done / Proceed";
-    [btnBack, btnRecall, btnNext, btnProcess, btnDone].forEach(b => buttonsDiv.appendChild(b));
+  // Update display at optionally suppress sound for first load
+  function updateDisplay(index, suppressSound = false) {
+    const leftText = document.querySelectorAll(".current-number")[index];
+    const rightText = document.querySelectorAll(".section-item span:last-child")[index];
+    leftText.textContent = `Current Number: ${currentNumbers[index]}`;
+    rightText.textContent = currentNumbers[index];
+    rightText.classList.add("blink");
+    setTimeout(() => rightText.classList.remove("blink"), 3000);
+    if (!suppressSound) speakNumber(currentNumbers[index], baseNumbers[index]);
+  }
 
-    const callRow = document.createElement("div"); callRow.className = "call-row";
-    const input = document.createElement("input"); input.type = "number"; input.min = "0"; input.max = "100";
-    const btnCall = document.createElement("button"); btnCall.textContent = "Call";
-    callRow.append(input, btnCall);
+  function createPanels() {
+    const grid = document.getElementById("grid");
+    const sectionList = document.getElementById("section-list");
+    grid.innerHTML = "";
+    sectionList.innerHTML = "";
 
-    card.append(title, current, buttonsDiv, callRow); grid.appendChild(card);
+    sections.forEach((section, index) => {
+      const key = sectionKeys[index];
+      firstLoadFlags[key] = true;
 
-    const sectionItem = document.createElement("div");
-    sectionItem.className = "section-item"; sectionItem.innerHTML = `<span>${section}</span><span>${currentNumbers[index]}</span>`;
-    sectionList.appendChild(sectionItem);
+      const card = document.createElement("div");
+      card.className = "card";
 
-    function saveNum() { db.ref(`queues/${key}`).set(currentNumbers[index]); }
+      const title = document.createElement("div");
+      title.className = "section-title";
+      title.textContent = section;
 
-    function toggleControls(disable) {
-      btnBack.disabled = disable;
-      btnNext.disabled = disable;
-      btnBack.classList.toggle("disabled", disable);
-      btnNext.classList.toggle("disabled", disable);
-    }
+      const current = document.createElement("div");
+      current.className = "current-number";
+      current.textContent = `Current Number: ${currentNumbers[index]}`;
 
-    db.ref(`queues/${key}`).on("value", snap => {
-      const val = snap.val();
-      if (val !== null) {
-        const isChanged = currentNumbers[index] !== val;
-        currentNumbers[index] = val;
-        updateDisplay(index, isInitialLoad[key]);
-        isInitialLoad[key] = false;
+      const buttonsDiv = document.createElement("div");
+      buttonsDiv.className = "buttons";
+
+      const btnBack = document.createElement("button");
+      const btnRecall = document.createElement("button");
+      const btnNext = document.createElement("button");
+      const btnProcess = document.createElement("button");
+      const btnDone = document.createElement("button");
+
+      btnBack.textContent = "Back";
+      btnRecall.textContent = "Recall";
+      btnNext.textContent = "Next";
+      btnProcess.textContent = "For Process";
+      btnDone.textContent = "Done / Proceed";
+
+      [btnBack, btnRecall, btnNext, btnProcess, btnDone].forEach((b) =>
+        buttonsDiv.appendChild(b)
+      );
+
+      const callRow = document.createElement("div");
+      callRow.className = "call-row";
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.max = "100";
+      const btnCall = document.createElement("button");
+      btnCall.textContent = "Call";
+      callRow.append(input, btnCall);
+
+      card.append(title, current, buttonsDiv, callRow);
+      grid.appendChild(card);
+
+      const sectionItem = document.createElement("div");
+      sectionItem.className = "section-item";
+      sectionItem.innerHTML = `<span>${section}</span><span>${currentNumbers[index]}</span>`;
+      sectionList.appendChild(sectionItem);
+
+      function toggleControls(disable) {
+        btnBack.disabled = disable;
+        btnNext.disabled = disable;
+        btnBack.classList.toggle("disabled", disable);
+        btnNext.classList.toggle("disabled", disable);
       }
-    });
 
-    db.ref(`queues/${key}_processing`).on("value", snap => {
-      const processing = !!snap.val();
-      if (processing) {
-        btnProcess.classList.add("glow-red");
-        btnDone.classList.remove("glow-green");
-        toggleControls(true);
-      } else {
-        btnProcess.classList.remove("glow-red");
-        if (currentNumbers[index] > baseNumbers[index]) {
-          btnDone.classList.add("glow-green");
-        } else {
-          btnDone.classList.remove("glow-green");
+      // Listen for number updates
+      db.ref(`queues/${key}`).on("value", (snap) => {
+        const val = snap.val();
+        if (val !== null) {
+          const oldNumber = currentNumbers[index];
+          currentNumbers[index] = val;
+          updateDisplay(index, firstLoadFlags[key]);
+
+          // Only speak if NOT first load and number changed
+          if (!firstLoadFlags[key] && val !== oldNumber) {
+            speakNumber(val, baseNumbers[index], false);
+          }
+          firstLoadFlags[key] = false;
         }
-        toggleControls(false);
+      });
+
+      // Listen for processing status
+      db.ref(`queues/${key}_processing`).on("value", (snap) => {
+        const processing = !!snap.val();
+        if (processing) {
+          btnProcess.classList.add("glow-red");
+          btnDone.classList.remove("glow-green");
+          toggleControls(true);
+        } else {
+          btnProcess.classList.remove("glow-red");
+          if (currentNumbers[index] > baseNumbers[index]) {
+            btnDone.classList.add("glow-green");
+          } else {
+            btnDone.classList.remove("glow-green");
+          }
+          toggleControls(false);
+        }
+      });
+
+      // Listen for recall requests
+      db.ref(`queues/${key}_recall`).on("value", (snap) => {
+        const val = snap.val();
+        if (val && currentNumbers[index] !== baseNumbers[index]) {
+          speakNumber(currentNumbers[index], baseNumbers[index], true);
+        }
+      });
+
+      function saveNum() {
+        db.ref(`queues/${key}`).set(currentNumbers[index]);
       }
+
+      btnBack.onclick = () => {
+        if (!btnBack.disabled && currentNumbers[index] > baseNumbers[index]) {
+          currentNumbers[index]--;
+          updateDisplay(index);
+          saveNum();
+        }
+      };
+      btnRecall.onclick = () => {
+        if (currentNumbers[index] !== baseNumbers[index]) {
+          db.ref(`queues/${key}_recall`).set(Date.now());
+        }
+      };
+      btnNext.onclick = () => {
+        if (!btnNext.disabled) {
+          if (currentNumbers[index] >= baseNumbers[index] + 100) {
+            currentNumbers[index] = baseNumbers[index] + 1;
+          } else {
+            currentNumbers[index]++;
+          }
+          updateDisplay(index);
+          saveNum();
+          db.ref(`queues/${key}_processing`).set(true);
+        }
+      };
+      btnDone.onclick = () => db.ref(`queues/${key}_processing`).set(false);
+      btnCall.onclick = () => {
+        const add = parseInt(input.value);
+        if (!isNaN(add) && add >= 0 && add <= 100) {
+          let nextNum = baseNumbers[index] + add;
+          if (add === 0) nextNum = baseNumbers[index] + 1;
+          currentNumbers[index] = nextNum;
+          updateDisplay(index);
+          saveNum();
+          db.ref(`queues/${key}_processing`).set(true);
+          input.value = "";
+        }
+      };
     });
-
-    db.ref(`queues/${key}_recall`).on("value", snap => {
-      const val = snap.val();
-      if (val && currentNumbers[index] !== baseNumbers[index]) {
-        speakNumber(currentNumbers[index]);
-      }
-    });
-
-    btnBack.onclick = () => {
-      if (!btnBack.disabled && currentNumbers[index] > baseNumbers[index]) {
-        currentNumbers[index]--;
-        updateDisplay(index);
-        saveNum();
-      }
-    };
-    btnRecall.onclick = () => {
-      if (currentNumbers[index] !== baseNumbers[index]) {
-        db.ref(`queues/${key}_recall`).set(Date.now());
-      }
-    };
-    btnNext.onclick = () => {
-      if (!btnNext.disabled) {
-        currentNumbers[index]++;
-        updateDisplay(index);
-        saveNum();
-        db.ref(`queues/${key}_processing`).set(true);
-      }
-    };
-    btnDone.onclick = () => db.ref(`queues/${key}_processing`).set(false);
-    btnCall.onclick = () => {
-      const add = parseInt(input.value);
-      if (!isNaN(add) && add >= 0 && add <= 100) {
-        let nextNum = baseNumbers[index] + add;
-        if (add === 0) nextNum = baseNumbers[index] + 1;
-        currentNumbers[index] = nextNum;
-        updateDisplay(index);
-        saveNum();
-        db.ref(`queues/${key}_processing`).set(true);
-        input.value = "";
-      }
-    };
-  });
-}
-if (speechSynthesis.getVoices().length) createPanels();
-else window.speechSynthesis.onvoiceschanged = createPanels;
-
-document.getElementById("resetAll").onclick = () => {
-  document.getElementById("resetAll").style.display = "none";
-  document.getElementById("confirmBox").style.display = "inline-block";
-};
-document.getElementById("confirmNo").onclick = () => {
-  document.getElementById("confirmBox").style.display = "none";
-  document.getElementById("resetAll").style.display = "inline-block";
-};
-document.getElementById("confirmYes").onclick = () => {
-  sectionKeys.forEach((key, i) => {
-    db.ref(`queues/${key}`).set(baseNumbers[i]);
-    db.ref(`queues/${key}_processing`).set(false);
-  });
-  location.reload();
-};
-
-window.addEventListener("keydown", e => {
-  if (e.key === "F5" || (e.ctrlKey && e.key.toLowerCase() === "r") || (e.metaKey && e.key.toLowerCase() === "r")) {
-    e.preventDefault(); alert("Manual refresh is disabled. Please use the CLEAR NUMBERS button.");
   }
-});
+
+  if (speechSynthesis.getVoices().length) createPanels();
+  else window.speechSynthesis.onvoiceschanged = createPanels;
+
+  document.getElementById("resetAll").onclick = () => {
+    document.getElementById("resetAll").style.display = "none";
+    document.getElementById("confirmBox").style.display = "inline-block";
+  };
+  document.getElementById("confirmNo").onclick = () => {
+    document.getElementById("confirmBox").style.display = "none";
+    document.getElementById("resetAll").style.display = "inline-block";
+  };
+  document.getElementById("confirmYes").onclick = () => {
+    sectionKeys.forEach((key, i) => {
+      db.ref(`queues/${key}`).set(baseNumbers[i]);
+      db.ref(`queues/${key}_processing`).set(false);
+    });
+    location.reload();
+  };
+
+  window.addEventListener("keydown", (e) => {
+    if (
+      e.key === "F5" ||
+      (e.ctrlKey && e.key.toLowerCase() === "r") ||
+      (e.metaKey && e.key.toLowerCase() === "r")
+    ) {
+      e.preventDefault();
+      alert("Manual refresh is disabled. Please use the CLEAR NUMBERS button.");
+    }
+  });
 </script>
+
 </body>
 </html>
