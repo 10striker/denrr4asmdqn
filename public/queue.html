@@ -9,6 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <style>
+    
     body {
       margin: 0;
       padding: 0;
@@ -241,10 +242,11 @@
   const currentNumbers = [...baseNumbers];
   const dingDong = new Audio("dingdong.mp3");
 
-  // NEW: Track per section if first load is done
-  const firstLoadDone = {};
+  // This flag suppresses all sounds until all initial data loads finish
+  let pageJustLoaded = true;
+  let sectionsLoadedCount = 0;
 
-  // Used to suppress repeat announcement
+  // Store spoken numbers per session to avoid repeats
   const spokenNumberPrefix = "spokenNum_";
   function wasNumberSpoken(sectionKey, number) {
     const spoken = sessionStorage.getItem(spokenNumberPrefix + sectionKey);
@@ -293,6 +295,8 @@
     const sectionList = document.getElementById("section-list");
     grid.innerHTML = "";
     sectionList.innerHTML = "";
+
+    const firstLoadDone = {};
 
     sections.forEach((section, index) => {
       const key = sectionKeys[index];
@@ -353,7 +357,7 @@
         btnNext.classList.toggle("disabled", disable);
       }
 
-      // Firebase number updates
+      // Listen for number updates
       db.ref(`queues/${key}`).on("value", (snap) => {
         const val = snap.val();
         if (val !== null) {
@@ -361,10 +365,17 @@
           currentNumbers[index] = val;
 
           if (!firstLoadDone[key]) {
-            updateDisplay(index, true); // suppress sound on first update
+            updateDisplay(index, true); // suppress sound on first load
             firstLoadDone[key] = true;
-          } else if (val !== oldNumber) {
-            updateDisplay(index); // play sound if changed
+
+            // Count loaded sections to know when all done
+            sectionsLoadedCount++;
+            if (sectionsLoadedCount === sections.length) {
+              // All sections initial load done, allow sounds
+              pageJustLoaded = false;
+            }
+          } else if (!pageJustLoaded && val !== oldNumber) {
+            updateDisplay(index); // play sound if changed and not initial load
           }
         }
       });
