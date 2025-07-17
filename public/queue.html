@@ -9,7 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <style>
-    /* (same styles as before) */
+    
     body {
       margin: 0;
       padding: 0;
@@ -242,10 +242,11 @@
   const currentNumbers = [...baseNumbers];
   const dingDong = new Audio("dingdong.mp3");
 
-  // Use sessionStorage flag to suppress sounds on initial load per browser session
-  let suppressSounds = sessionStorage.getItem("suppressSounds") !== "false";
+  // This flag suppresses all sounds until all initial data loads finish
+  let pageJustLoaded = true;
+  let sectionsLoadedCount = 0;
 
-  // Store spoken numbers per section in sessionStorage
+  // Store spoken numbers per session to avoid repeats
   const spokenNumberPrefix = "spokenNum_";
   function wasNumberSpoken(sectionKey, number) {
     const spoken = sessionStorage.getItem(spokenNumberPrefix + sectionKey);
@@ -286,7 +287,7 @@
     rightText.textContent = currentNumbers[index];
     rightText.classList.add("blink");
     setTimeout(() => rightText.classList.remove("blink"), 3000);
-    if (!suppressSound && !suppressSounds) speakNumber(currentNumbers[index], baseNumbers[index], sectionKeys[index]);
+    if (!suppressSound) speakNumber(currentNumbers[index], baseNumbers[index], sectionKeys[index]);
   }
 
   function createPanels() {
@@ -296,8 +297,6 @@
     sectionList.innerHTML = "";
 
     const firstLoadDone = {};
-
-    let sectionsLoadedCount = 0;
 
     sections.forEach((section, index) => {
       const key = sectionKeys[index];
@@ -369,19 +368,18 @@
             updateDisplay(index, true); // suppress sound on first load
             firstLoadDone[key] = true;
 
+            // Count loaded sections to know when all done
             sectionsLoadedCount++;
             if (sectionsLoadedCount === sections.length) {
-              // All initial loads done, disable suppression
-              suppressSounds = false;
-              sessionStorage.setItem("suppressSounds", "false");
+              // All sections initial load done, allow sounds
+              pageJustLoaded = false;
             }
-          } else if (val !== oldNumber) {
-            updateDisplay(index);
+          } else if (!pageJustLoaded && val !== oldNumber) {
+            updateDisplay(index); // play sound if changed and not initial load
           }
         }
       });
 
-      // Processing status listener
       db.ref(`queues/${key}_processing`).on("value", (snap) => {
         const processing = !!snap.val();
         if (processing) {
@@ -399,7 +397,6 @@
         }
       });
 
-      // Recall listener
       db.ref(`queues/${key}_recall`).on("value", (snap) => {
         const val = snap.val();
         if (val && currentNumbers[index] !== baseNumbers[index]) {
