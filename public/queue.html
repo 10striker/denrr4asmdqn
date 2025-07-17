@@ -241,20 +241,11 @@
   const currentNumbers = [...baseNumbers];
   const dingDong = new Audio("dingdong.mp3");
 
-  // Flag to track if this session already heard initial numbers (to suppress first load sound)
-  let hasHeardInitial = sessionStorage.getItem("hasHeardInitial") === "true";
+  // NEW: Track per section if first load is done
+  const firstLoadDone = {};
 
-  // Session storage key prefix for already spoken number per section
+  // Used to suppress repeat announcement
   const spokenNumberPrefix = "spokenNum_";
-
-  function updateClock() {
-    const now = new Date();
-    document.getElementById("clock").textContent = `${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
-  }
-  setInterval(updateClock, 1000);
-  updateClock();
-
-  // Function to check if number was already spoken this session per section
   function wasNumberSpoken(sectionKey, number) {
     const spoken = sessionStorage.getItem(spokenNumberPrefix + sectionKey);
     return spoken === String(number);
@@ -263,13 +254,15 @@
     sessionStorage.setItem(spokenNumberPrefix + sectionKey, String(number));
   }
 
-  // Function to play sound and speak number if allowed
+  function updateClock() {
+    const now = new Date();
+    document.getElementById("clock").textContent = `${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
   function speakNumber(number, base, sectionKey) {
-    // Suppress sound if number is base number or duplicate number for this section
-    if (
-      number === base ||
-      wasNumberSpoken(sectionKey, number)
-    ) return;
+    if (number === base || wasNumberSpoken(sectionKey, number)) return;
 
     markNumberSpoken(sectionKey, number);
     dingDong.play();
@@ -303,6 +296,7 @@
 
     sections.forEach((section, index) => {
       const key = sectionKeys[index];
+      firstLoadDone[key] = false;
 
       const card = document.createElement("div");
       card.className = "card";
@@ -359,24 +353,22 @@
         btnNext.classList.toggle("disabled", disable);
       }
 
-      // Listen for number updates
+      // Firebase number updates
       db.ref(`queues/${key}`).on("value", (snap) => {
         const val = snap.val();
         if (val !== null) {
           const oldNumber = currentNumbers[index];
           currentNumbers[index] = val;
 
-          // suppress sound on first load only
-          updateDisplay(index, !hasHeardInitial);
-
-          // Only speak if already heard initial and number changed
-          if (hasHeardInitial && val !== oldNumber) {
-            speakNumber(val, baseNumbers[index], key);
+          if (!firstLoadDone[key]) {
+            updateDisplay(index, true); // suppress sound on first update
+            firstLoadDone[key] = true;
+          } else if (val !== oldNumber) {
+            updateDisplay(index); // play sound if changed
           }
         }
       });
 
-      // Listen for processing status
       db.ref(`queues/${key}_processing`).on("value", (snap) => {
         const processing = !!snap.val();
         if (processing) {
@@ -394,7 +386,6 @@
         }
       });
 
-      // Listen for recall requests
       db.ref(`queues/${key}_recall`).on("value", (snap) => {
         const val = snap.val();
         if (val && currentNumbers[index] !== baseNumbers[index]) {
@@ -444,10 +435,6 @@
         }
       };
     });
-
-    // Mark that initial numbers have been heard so next changes will play sound
-    sessionStorage.setItem("hasHeardInitial", "true");
-    hasHeardInitial = true;
   }
 
   if (speechSynthesis.getVoices().length) createPanels();
