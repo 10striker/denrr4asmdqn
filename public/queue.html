@@ -241,8 +241,14 @@
   const currentNumbers = [...baseNumbers];
   const dingDong = new Audio("dingdong.mp3");
 
-  // Flags para i-suppress ang unang tunog sa unang load sa bawat user/session
+  // Flags to suppress first load sound per section
   const firstLoadFlags = {};
+
+  // Session storage key prefix for suppression
+  const sessionStoragePrefix = "firstLoad_";
+
+  // Session storage key prefix for already spoken number per section
+  const spokenNumberPrefix = "spokenNum_";
 
   function updateClock() {
     const now = new Date();
@@ -251,15 +257,26 @@
   setInterval(updateClock, 1000);
   updateClock();
 
-  // Function para tumunog lang kapag may update, pero hindi sa unang load
-  function speakNumber(number, base, suppressFirstLoad = true) {
+  // Function to check if number was already spoken this session per section
+  function wasNumberSpoken(sectionKey, number) {
+    const spoken = sessionStorage.getItem(spokenNumberPrefix + sectionKey);
+    return spoken === String(number);
+  }
+  function markNumberSpoken(sectionKey, number) {
+    sessionStorage.setItem(spokenNumberPrefix + sectionKey, String(number));
+  }
+
+  // Function to play sound and speak number if allowed
+  function speakNumber(number, base, sectionKey, suppressFirstLoad = true) {
+    // Suppress sound on first load or if number is base number or duplicate number for this section
     if (
-      (suppressFirstLoad && firstLoadFlags.current === true) || // unang load, suppress
-      number === base || // default base number, suppress
-      window.alreadySpoken === number // ulit ulit na number, suppress
+      (suppressFirstLoad && firstLoadFlags[sectionKey] === true) ||
+      number === base ||
+      wasNumberSpoken(sectionKey, number)
     ) return;
 
-    window.alreadySpoken = number;
+    markNumberSpoken(sectionKey, number);
+    dingDong.play();
     const utter = new SpeechSynthesisUtterance(
       `Now serving number ${number.toString().split("").join(" ")}`
     );
@@ -269,11 +286,9 @@
         .find((v) => v.name.toLowerCase().includes("zira")) ||
       speechSynthesis.getVoices()[0];
     utter.rate = 0.7;
-    dingDong.play();
     setTimeout(() => speechSynthesis.speak(utter), 500);
   }
 
-  // Update display at optionally suppress sound for first load
   function updateDisplay(index, suppressSound = false) {
     const leftText = document.querySelectorAll(".current-number")[index];
     const rightText = document.querySelectorAll(".section-item span:last-child")[index];
@@ -281,7 +296,7 @@
     rightText.textContent = currentNumbers[index];
     rightText.classList.add("blink");
     setTimeout(() => rightText.classList.remove("blink"), 3000);
-    if (!suppressSound) speakNumber(currentNumbers[index], baseNumbers[index]);
+    if (!suppressSound) speakNumber(currentNumbers[index], baseNumbers[index], sectionKeys[index]);
   }
 
   function createPanels() {
@@ -292,7 +307,14 @@
 
     sections.forEach((section, index) => {
       const key = sectionKeys[index];
-      firstLoadFlags[key] = true;
+
+      // Use sessionStorage to check if first load already done per section
+      if (sessionStorage.getItem(sessionStoragePrefix + key) === "done") {
+        firstLoadFlags[key] = false;
+      } else {
+        firstLoadFlags[key] = true;
+        sessionStorage.setItem(sessionStoragePrefix + key, "done");
+      }
 
       const card = document.createElement("div");
       card.className = "card";
@@ -359,7 +381,7 @@
 
           // Only speak if NOT first load and number changed
           if (!firstLoadFlags[key] && val !== oldNumber) {
-            speakNumber(val, baseNumbers[index], false);
+            speakNumber(val, baseNumbers[index], key, false);
           }
           firstLoadFlags[key] = false;
         }
@@ -387,7 +409,7 @@
       db.ref(`queues/${key}_recall`).on("value", (snap) => {
         const val = snap.val();
         if (val && currentNumbers[index] !== baseNumbers[index]) {
-          speakNumber(currentNumbers[index], baseNumbers[index], true);
+          speakNumber(currentNumbers[index], baseNumbers[index], key, true);
         }
       });
 
