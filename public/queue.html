@@ -241,11 +241,10 @@
   const currentNumbers = [...baseNumbers];
   const dingDong = new Audio("dingdong.mp3");
 
-  // Flags for first load suppression
-  const firstLoadFlags = {};
+  // Flag to track if this session already heard initial numbers (to suppress first load sound)
+  let hasHeardInitial = sessionStorage.getItem("hasHeardInitial") === "true";
 
-  // Storage keys
-  const sessionStoragePrefix = "firstLoad_";
+  // Session storage key prefix for already spoken number per section
   const spokenNumberPrefix = "spokenNum_";
 
   function updateClock() {
@@ -255,6 +254,7 @@
   setInterval(updateClock, 1000);
   updateClock();
 
+  // Function to check if number was already spoken this session per section
   function wasNumberSpoken(sectionKey, number) {
     const spoken = sessionStorage.getItem(spokenNumberPrefix + sectionKey);
     return spoken === String(number);
@@ -263,35 +263,36 @@
     sessionStorage.setItem(spokenNumberPrefix + sectionKey, String(number));
   }
 
+  // Function to play sound and speak number if allowed
   function speakNumber(number, base, sectionKey) {
+    // Suppress sound if number is base number or duplicate number for this section
     if (
-      firstLoadFlags[sectionKey] === true ||  // suppress if first load
-      number === base ||                      // suppress base number
-      wasNumberSpoken(sectionKey, number)     // suppress already spoken in this tab
+      number === base ||
+      wasNumberSpoken(sectionKey, number)
     ) return;
 
     markNumberSpoken(sectionKey, number);
     dingDong.play();
     const utter = new SpeechSynthesisUtterance(
-      `A ${String(number).slice(-3).split("").join(" ")} Window ${sectionKeys.indexOf(sectionKey) + 1}`
+      `Now serving number ${number.toString().split("").join(" ")}`
     );
     utter.voice =
       speechSynthesis
         .getVoices()
-        .find(v => v.name.toLowerCase().includes("zira")) ||
+        .find((v) => v.name.toLowerCase().includes("zira")) ||
       speechSynthesis.getVoices()[0];
     utter.rate = 0.7;
     setTimeout(() => speechSynthesis.speak(utter), 500);
   }
 
-  function updateDisplay(index) {
+  function updateDisplay(index, suppressSound = false) {
     const leftText = document.querySelectorAll(".current-number")[index];
     const rightText = document.querySelectorAll(".section-item span:last-child")[index];
     leftText.textContent = `Current Number: ${currentNumbers[index]}`;
     rightText.textContent = currentNumbers[index];
     rightText.classList.add("blink");
     setTimeout(() => rightText.classList.remove("blink"), 3000);
-    speakNumber(currentNumbers[index], baseNumbers[index], sectionKeys[index]);
+    if (!suppressSound) speakNumber(currentNumbers[index], baseNumbers[index], sectionKeys[index]);
   }
 
   function createPanels() {
@@ -303,15 +304,6 @@
     sections.forEach((section, index) => {
       const key = sectionKeys[index];
 
-      // Mark first load per tab
-      if (sessionStorage.getItem(sessionStoragePrefix + key) === "done") {
-        firstLoadFlags[key] = false;
-      } else {
-        firstLoadFlags[key] = true;
-        sessionStorage.setItem(sessionStoragePrefix + key, "done");
-      }
-
-      // UI creation...
       const card = document.createElement("div");
       card.className = "card";
 
@@ -367,17 +359,24 @@
         btnNext.classList.toggle("disabled", disable);
       }
 
-      // Firebase listeners
+      // Listen for number updates
       db.ref(`queues/${key}`).on("value", (snap) => {
         const val = snap.val();
         if (val !== null) {
           const oldNumber = currentNumbers[index];
           currentNumbers[index] = val;
-          updateDisplay(index);
-          firstLoadFlags[key] = false; // after first display
+
+          // suppress sound on first load only
+          updateDisplay(index, !hasHeardInitial);
+
+          // Only speak if already heard initial and number changed
+          if (hasHeardInitial && val !== oldNumber) {
+            speakNumber(val, baseNumbers[index], key);
+          }
         }
       });
 
+      // Listen for processing status
       db.ref(`queues/${key}_processing`).on("value", (snap) => {
         const processing = !!snap.val();
         if (processing) {
@@ -395,13 +394,10 @@
         }
       });
 
+      // Listen for recall requests
       db.ref(`queues/${key}_recall`).on("value", (snap) => {
         const val = snap.val();
-        if (
-          val &&
-          currentNumbers[index] !== baseNumbers[index] &&
-          !firstLoadFlags[key]
-        ) {
+        if (val && currentNumbers[index] !== baseNumbers[index]) {
           speakNumber(currentNumbers[index], baseNumbers[index], key);
         }
       });
@@ -448,6 +444,10 @@
         }
       };
     });
+
+    // Mark that initial numbers have been heard so next changes will play sound
+    sessionStorage.setItem("hasHeardInitial", "true");
+    hasHeardInitial = true;
   }
 
   if (speechSynthesis.getVoices().length) createPanels();
@@ -480,5 +480,6 @@
     }
   });
 </script>
+
 </body>
 </html>
