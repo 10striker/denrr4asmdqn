@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SMD QUEUING 2025</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #d3e3fd;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .left-panel {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      box-sizing: border-box;
+      padding: 5px;
+    }
+    .right-panel {
+      width: 50%;
+      padding: 30px 20px 30px 10px;
+      box-sizing: border-box;
+      background: #d3e3fd;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      max-height: 52vh;
+      overflow-y: auto;
+    }
+    .card {
+      background: #fff;
+      padding: 5px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .current-number {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .call-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .buttons button, .call-row button {
+      background: #222;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .buttons button:hover, .call-row button:hover {
+      background: #444;
+    }
+    .buttons button.disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+    .call-row input {
+      width: 60px;
+      padding: 6px;
+      font-size: 14px;
+    }
+    .glow-red {
+      box-shadow: 0 0 10px 3px red;
+    }
+    .glow-green {
+      box-shadow: 0 0 10px 3px limegreen;
+    }
+    .clock {
+      text-align: right;
+      font-size: 40px;
+      font-weight: bold;
+    }
+    .left-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 55px;
+      font-weight: bold;
+    }
+    .right-title {
+      font-size: 60px;
+      font-weight: bold;
+      text-align: right;
+    }
+    .chat-embed {
+      flex-grow: 1;
+      display: flex;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 5px;
+      min-height: 180px;
+    }
+    .chat-embed iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 8px;
+    }
+    .reset-wrapper {
+      margin: 0 0 -1px 0;
+      display: flex;
+      justify-content: flex-start;
+    }
+    .reset-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    #resetAll, #confirmYes, #confirmNo {
+      background: red;
+      color: #fff;
+      border: none;
+      padding: 1px 1px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 15px;
+    }
+    #resetAll:hover, #confirmYes:hover, #confirmNo:hover {
+      background: #c9302c;
+    }
+    .logo {
+      height: 115px;
+    }
+    .section-item {
+      background: #fff;
+      color: #000;
+      font-weight: bold;
+      font-size: 60px;
+      padding: 3px 5px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .blink {
+      animation: blink 1s ease-in-out 3;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body>
+
+<div class="left-panel">
+  <div class="top-section">
+    <div class="reset-wrapper">
+      <div class="reset-row">
+        <button id="resetAll">CLEAR NUMBERS</button>
+        <div class="confirm-box" id="confirmBox" style="display: none;">
+          <button id="confirmYes">Yes</button>
+          <button id="confirmNo">No</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid-container" id="grid"></div>
+  </div>
+  <div class="chat-embed">
+    <iframe src="https://cht-bx-denr4a2025.web.app" scrolling="no" allow="clipboard-write; clipboard-read; microphone; camera"></iframe>
+  </div>
+</div>
+
+<div class="right-panel">
+  <div class="now-serving-header">
+    <div class="left-title">
+      <img src="DENRlogo.png" alt="Logo" class="logo" />
+      <span>DEPARTMENT OF ENVIRONMENT<br />AND NATURAL RESOURCES</span>
+    </div>
+    <div class="right-title"></div>
+  </div>
+  <div class="section-list" id="section-list"></div>
+  <div class="clock" id="clock">Loading time...</div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCd4D6a_q5JXgnDWF5lewdAt0-mM0O4HCw",
+    authDomain: "qn-denr4a2025.firebaseapp.com",
+    databaseURL: "https://qn-denr4a2025-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "qn-denr4a2025",
+    storageBucket: "qn-denr4a2025.appspot.com",
+    messagingSenderId: "161329402235",
+    appId: "1:161329402235:web:75c889dd6887fc00002dde"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const sections = [
+    "Office of the Chief Surveys and Mapping Division",
+    "Aggregate and Correction Section",
+    "Original and Other Survey Section",
+    "Land Evaluation Section",
+    "Survey Control Section",
+    "Senior/PWD"
+  ];
+  const sectionKeys = ["chief", "aggregate", "original", "evaluation", "control", "senior"];
+  const baseNumbers = [1000, 2000, 3000, 4000, 5000, 6000];
+  const currentNumbers = [...baseNumbers];
+  const dingDong = new Audio("dingdong.mp3");
+
+  // Flags to suppress first load sound per section
+  const firstLoadFlags = {};
+
+  // Session storage key prefix for suppression
+  const sessionStoragePrefix = "firstLoad_";
+
+  // Session storage key prefix for already spoken number per section
+  const spokenNumberPrefix = "spokenNum_";
+
+  function updateClock() {
+    const now = new Date();
+    document.getElementById("clock").textContent = `${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Function to check if number was already spoken this session per section
+  function wasNumberSpoken(sectionKey, number) {
+    const spoken = sessionStorage.getItem(spokenNumberPrefix + sectionKey);
+    return spoken === String(number);
+  }
+  function markNumberSpoken(sectionKey, number) {
+    sessionStorage.setItem(spokenNumberPrefix + sectionKey, String(number));
+  }
+
+  // Function to play sound and speak number if allowed
+  function speakNumber(number, base, sectionKey, suppressFirstLoad = true) {
+    // Suppress sound on first load or if number is base number or duplicate number for this section
+    if (
+      (suppressFirstLoad && firstLoadFlags[sectionKey] === true) ||
+      number === base ||
+      wasNumberSpoken(sectionKey, number)
+    ) return;
+
+    markNumberSpoken(sectionKey, number);
+    dingDong.play();
+    const utter = new SpeechSynthesisUtterance(
+      `Now serving number ${number.toString().split("").join(" ")}`
+    );
+    utter.voice =
+      speechSynthesis
+        .getVoices()
+        .find((v) => v.name.toLowerCase().includes("zira")) ||
+      speechSynthesis.getVoices()[0];
+    utter.rate = 0.7;
+    setTimeout(() => speechSynthesis.speak(utter), 500);
+  }
+
+  function updateDisplay(index, suppressSound = false) {
+    const leftText = document.querySelectorAll(".current-number")[index];
+    const rightText = document.querySelectorAll(".section-item span:last-child")[index];
+    leftText.textContent = `Current Number: ${currentNumbers[index]}`;
+    rightText.textContent = currentNumbers[index];
+    rightText.classList.add("blink");
+    setTimeout(() => rightText.classList.remove("blink"), 3000);
+    if (!suppressSound) speakNumber(currentNumbers[index], baseNumbers[index], sectionKeys[index]);
+  }
+
+  function createPanels() {
+    const grid = document.getElementById("grid");
+    const sectionList = document.getElementById("section-list");
+    grid.innerHTML = "";
+    sectionList.innerHTML = "";
+
+    sections.forEach((section, index) => {
+      const key = sectionKeys[index];
+
+      // Use sessionStorage to check if first load already done per section
+      if (sessionStorage.getItem(sessionStoragePrefix + key) === "done") {
+        firstLoadFlags[key] = false;
+      } else {
+        firstLoadFlags[key] = true;
+        sessionStorage.setItem(sessionStoragePrefix + key, "done");
+      }
+
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const title = document.createElement("div");
+      title.className = "section-title";
+      title.textContent = section;
+
+      const current = document.createElement("div");
+      current.className = "current-number";
+      current.textContent = `Current Number: ${currentNumbers[index]}`;
+
+      const buttonsDiv = document.createElement("div");
+      buttonsDiv.className = "buttons";
+
+      const btnBack = document.createElement("button");
+      const btnRecall = document.createElement("button");
+      const btnNext = document.createElement("button");
+      const btnProcess = document.createElement("button");
+      const btnDone = document.createElement("button");
+
+      btnBack.textContent = "Back";
+      btnRecall.textContent = "Recall";
+      btnNext.textContent = "Next";
+      btnProcess.textContent = "For Process";
+      btnDone.textContent = "Done / Proceed";
+
+      [btnBack, btnRecall, btnNext, btnProcess, btnDone].forEach((b) =>
+        buttonsDiv.appendChild(b)
+      );
+
+      const callRow = document.createElement("div");
+      callRow.className = "call-row";
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.max = "100";
+      const btnCall = document.createElement("button");
+      btnCall.textContent = "Call";
+      callRow.append(input, btnCall);
+
+      card.append(title, current, buttonsDiv, callRow);
+      grid.appendChild(card);
+
+      const sectionItem = document.createElement("div");
+      sectionItem.className = "section-item";
+      sectionItem.innerHTML = `<span>${section}</span><span>${currentNumbers[index]}</span>`;
+      sectionList.appendChild(sectionItem);
+
+      function toggleControls(disable) {
+        btnBack.disabled = disable;
+        btnNext.disabled = disable;
+        btnBack.classList.toggle("disabled", disable);
+        btnNext.classList.toggle("disabled", disable);
+      }
+
+      // Listen for number updates
+      db.ref(`queues/${key}`).on("value", (snap) => {
+        const val = snap.val();
+        if (val !== null) {
+          const oldNumber = currentNumbers[index];
+          currentNumbers[index] = val;
+          updateDisplay(index, firstLoadFlags[key]);
+
+          // Only speak if NOT first load and number changed
+          if (!firstLoadFlags[key] && val !== oldNumber) {
+            speakNumber(val, baseNumbers[index], key, false);
+          }
+          firstLoadFlags[key] = false;
+        }
+      });
+
+      // Listen for processing status
+      db.ref(`queues/${key}_processing`).on("value", (snap) => {
+        const processing = !!snap.val();
+        if (processing) {
+          btnProcess.classList.add("glow-red");
+          btnDone.classList.remove("glow-green");
+          toggleControls(true);
+        } else {
+          btnProcess.classList.remove("glow-red");
+          if (currentNumbers[index] > baseNumbers[index]) {
+            btnDone.classList.add("glow-green");
+          } else {
+            btnDone.classList.remove("glow-green");
+          }
+          toggleControls(false);
+        }
+      });
+
+      // Listen for recall requests
+      db.ref(`queues/${key}_recall`).on("value", (snap) => {
+        const val = snap.val();
+        if (val && currentNumbers[index] !== baseNumbers[index]) {
+          speakNumber(currentNumbers[index], baseNumbers[index], key, true);
+        }
+      });
+
+      function saveNum() {
+        db.ref(`queues/${key}`).set(currentNumbers[index]);
+      }
+
+      btnBack.onclick = () => {
+        if (!btnBack.disabled && currentNumbers[index] > baseNumbers[index]) {
+          currentNumbers[index]--;
+          updateDisplay(index);
+          saveNum();
+        }
+      };
+      btnRecall.onclick = () => {
+        if (currentNumbers[index] !== baseNumbers[index]) {
+          db.ref(`queues/${key}_recall`).set(Date.now());
+        }
+      };
+      btnNext.onclick = () => {
+        if (!btnNext.disabled) {
+          if (currentNumbers[index] >= baseNumbers[index] + 100) {
+            currentNumbers[index] = baseNumbers[index] + 1;
+          } else {
+            currentNumbers[index]++;
+          }
+          updateDisplay(index);
+          saveNum();
+          db.ref(`queues/${key}_processing`).set(true);
+        }
+      };
+      btnDone.onclick = () => db.ref(`queues/${key}_processing`).set(false);
+      btnCall.onclick = () => {
+        const add = parseInt(input.value);
+        if (!isNaN(add) && add >= 0 && add <= 100) {
+          let nextNum = baseNumbers[index] + add;
+          if (add === 0) nextNum = baseNumbers[index] + 1;
+          currentNumbers[index] = nextNum;
+          updateDisplay(index);
+          saveNum();
+          db.ref(`queues/${key}_processing`).set(true);
+          input.value = "";
+        }
+      };
+    });
+  }
+
+  if (speechSynthesis.getVoices().length) createPanels();
+  else window.speechSynthesis.onvoiceschanged = createPanels;
+
+  document.getElementById("resetAll").onclick = () => {
+    document.getElementById("resetAll").style.display = "none";
+    document.getElementById("confirmBox").style.display = "inline-block";
+  };
+  document.getElementById("confirmNo").onclick = () => {
+    document.getElementById("confirmBox").style.display = "none";
+    document.getElementById("resetAll").style.display = "inline-block";
+  };
+  document.getElementById("confirmYes").onclick = () => {
+    sectionKeys.forEach((key, i) => {
+      db.ref(`queues/${key}`).set(baseNumbers[i]);
+      db.ref(`queues/${key}_processing`).set(false);
+    });
+    location.reload();
+  };
+
+  window.addEventListener("keydown", (e) => {
+    if (
+      e.key === "F5" ||
+      (e.ctrlKey && e.key.toLowerCase() === "r") ||
+      (e.metaKey && e.key.toLowerCase() === "r")
+    ) {
+      e.preventDefault();
+      alert("Manual refresh is disabled. Please use the CLEAR NUMBERS button.");
+    }
+  });
+</script>
+
+</body>
+</html>
