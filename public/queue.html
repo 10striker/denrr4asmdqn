@@ -257,9 +257,13 @@
   }
 
   function updateClock() {
-    const now = new Date();
-    document.getElementById("clock").textContent = `${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
-  }
+  const now = new Date();
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  const date = now.toLocaleDateString('en-US', options);
+  const time = now.toLocaleTimeString('en-US');
+  document.getElementById("clock").textContent = `${date} | ${time}`;
+}
+
   setInterval(updateClock, 1000);
   updateClock();
 
