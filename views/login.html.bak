@@ -9,7 +9,7 @@
       display: flex;
       justify-content: flex-start; /* ilipat sa kaliwa */
       align-items: center;
-      height: 40vh;
+      height: 4vh;
       background: #d3e3fd;
       padding-left: 50px; /* optional: space mula sa gilid */
     }

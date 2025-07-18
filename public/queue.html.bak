@@ -9,6 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <style>
+    
     body {
       margin: 0;
       padding: 0;
@@ -241,9 +242,11 @@
   const currentNumbers = [...baseNumbers];
   const dingDong = new Audio("dingdong.mp3");
 
+  // This flag suppresses all sounds until all initial data loads finish
   let pageJustLoaded = true;
   let sectionsLoadedCount = 0;
 
+  // Store spoken numbers per session to avoid repeats
   const spokenNumberPrefix = "spokenNum_";
   function wasNumberSpoken(sectionKey, number) {
     const spoken = sessionStorage.getItem(spokenNumberPrefix + sectionKey);
@@ -259,51 +262,6 @@
   }
   setInterval(updateClock, 1000);
   updateClock();
-
-  // --- Auto-reset TEST at 11:30 PM ---
-  function autoResetAtTestTime() {
-    setInterval(() => {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-
-      const today = now.toDateString();
-      const alreadyReset = localStorage.getItem("autoResetDoneTest");
-
-      if (hours === 23 && minutes === 30 && alreadyReset !== today) {
-        sectionKeys.forEach((key, i) => {
-          db.ref(`queues/${key}`).set(baseNumbers[i]);
-          db.ref(`queues/${key}_processing`).set(false);
-        });
-
-        localStorage.setItem("autoResetDoneTest", today);
-
-        setTimeout(() => location.reload(), 1000);
-      }
-    }, 10000); // check every 10 seconds for testing speed
-  }
-  autoResetAtTestTime();
-
-  // --- Auto-reset check on page load (daily reset if missed) ---
-  function checkAndResetIfNeeded() {
-    const today = new Date().toDateString();
-
-    db.ref("queues/lastReset").once("value", (snapshot) => {
-      const lastReset = snapshot.val();
-
-      if (lastReset !== today) {
-        sectionKeys.forEach((key, i) => {
-          db.ref(`queues/${key}`).set(baseNumbers[i]);
-          db.ref(`queues/${key}_processing`).set(false);
-        });
-
-        db.ref("queues/lastReset").set(today);
-
-        setTimeout(() => location.reload(), 1000);
-      }
-    });
-  }
-  checkAndResetIfNeeded();
 
   function speakNumber(number, base, sectionKey) {
     if (number === base || wasNumberSpoken(sectionKey, number)) return;
@@ -399,6 +357,7 @@
         btnNext.classList.toggle("disabled", disable);
       }
 
+      // Listen for number updates
       db.ref(`queues/${key}`).on("value", (snap) => {
         const val = snap.val();
         if (val !== null) {
@@ -406,15 +365,17 @@
           currentNumbers[index] = val;
 
           if (!firstLoadDone[key]) {
-            updateDisplay(index, true);
+            updateDisplay(index, true); // suppress sound on first load
             firstLoadDone[key] = true;
 
+            // Count loaded sections to know when all done
             sectionsLoadedCount++;
             if (sectionsLoadedCount === sections.length) {
+              // All sections initial load done, allow sounds
               pageJustLoaded = false;
             }
           } else if (!pageJustLoaded && val !== oldNumber) {
-            updateDisplay(index);
+            updateDisplay(index); // play sound if changed and not initial load
           }
         }
       });
