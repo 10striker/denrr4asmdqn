@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SMD QUEUING 2025</title>
+  <title>SMD QUEUING NUMBER</title>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -242,11 +242,11 @@
   const currentNumbers = [...baseNumbers];
   const dingDong = new Audio("dingdong.mp3");
 
-  // This flag suppresses all sounds until all initial data loads finish
+  //
   let pageJustLoaded = true;
   let sectionsLoadedCount = 0;
 
-  // Store spoken numbers per session to avoid repeats
+  //
   const spokenNumberPrefix = "spokenNum_";
   function wasNumberSpoken(sectionKey, number) {
     const spoken = sessionStorage.getItem(spokenNumberPrefix + sectionKey);
@@ -361,7 +361,7 @@
         btnNext.classList.toggle("disabled", disable);
       }
 
-      // Listen for number updates
+      //
       db.ref(`queues/${key}`).on("value", (snap) => {
         const val = snap.val();
         if (val !== null) {
@@ -369,17 +369,17 @@
           currentNumbers[index] = val;
 
           if (!firstLoadDone[key]) {
-            updateDisplay(index, true); // suppress sound on first load
+            updateDisplay(index, true); //
             firstLoadDone[key] = true;
 
-            // Count loaded sections to know when all done
+            //
             sectionsLoadedCount++;
             if (sectionsLoadedCount === sections.length) {
-              // All sections initial load done, allow sounds
+              //
               pageJustLoaded = false;
             }
           } else if (!pageJustLoaded && val !== oldNumber) {
-            updateDisplay(index); // play sound if changed and not initial load
+            updateDisplay(index); //
           }
         }
       });
